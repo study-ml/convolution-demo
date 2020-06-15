@@ -1,0 +1,182 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-9">
+        <p>Open image: <input class="form-control" type="file" id="inputImage"/></p>
+        <canvas id="ori" width="512" height="512" style="border:1px solid #000000;"></canvas>
+        <canvas id="tar" width="512" height="512" style="border:1px solid #000000;"></canvas>
+      </div>
+      <div class="col-md-3">
+        <table id="xy">
+          <tr>
+            <td>X:</td><td id="x"></td>
+            <td>Y:</td><td id="y"></td>
+          </tr>
+        </table>
+        <hr>
+        <label for="dataOri">Original: </label>
+        <table id="dataOri">
+        </table>
+        <hr>
+        <label for="dataTar">Target: </label>
+        <table id="dataTar">
+        </table>
+        <hr>
+        <label for="filter">Filter:</label>
+        <table id="filter" border="1">
+          <tr>
+            <td><input id="f00" type="text" style="width:28px" value="1"></td>
+            <td><input id="f01" type="text" style="width:28px" value="1"></td>
+            <td><input id="f02" type="text" style="width:28px" value="1"></td>
+          </tr>
+          <tr>
+            <td><input id="f10" type="text" style="width:28px" value="0"></td>
+            <td><input id="f11" type="text" style="width:28px" value="0"></td>
+            <td><input id="f12" type="text" style="width:28px" value="0"></td>
+          </tr>
+          <tr>
+            <td><input id="f20" type="text" style="width:28px" value="-1"></td>
+            <td><input id="f21" type="text" style="width:28px" value="-1"></td>
+            <td><input id="f22" type="text" style="width:28px" value="-1"></td>
+          </tr>
+        </table>
+        <button type="button" class="btn btn-success" onclick="doImageProcessing();">Apply Filter</button>
+      </div>
+    </div>
+  </div>  
+  <script>
+    var URL = window.URL;
+    var cvsOri = $('#ori').get(0);
+    var ctxOri = cvsOri.getContext('2d');
+    var cvsTar = $('#tar').get(0);
+    var ctxTar = cvsTar.getContext('2d');
+
+    cvsOri.addEventListener('mousemove', mousePos, false);
+    cvsTar.addEventListener('mousemove', mousePos, false);
+
+    window.onload = function() {
+      $('#inputImage').get(0).addEventListener('change', handleImageFiles, false);
+    }
+
+    function mousePos(evt) {
+      const rect = (this.id == "ori") ? cvsOri.getBoundingClientRect() : cvsTar.getBoundingClientRect();
+
+      var x = parseInt(evt.clientX - rect.left);
+      var y = parseInt(evt.clientY - rect.top);
+
+      $("#x").text(x);
+      $("#y").text(y);
+      
+      const size = 9;
+      // console.log(parseInt(size/2));
+
+      // p[0]: r, p[1]: g, p[2]: b, p[3]: a
+      const p = ctxOri.getImageData(
+        x - parseInt(size/2), 
+        y - parseInt(size/2), 
+        size, 
+        size).data;
+      const q = ctxTar.getImageData(
+        x - parseInt(size/2), 
+        y - parseInt(size/2), 
+        size, 
+        size).data;
+      
+      var oriHtml = "";
+      var tarHtml = "";
+      for (var i=0; i < p.length; i+=4) {
+        const idx = parseInt(i / 4);
+
+        const pValue = p[i];
+        const qValue = q[i];
+        const x = idx % size;
+        const y = parseInt(idx / size);
+        
+        if (x == 0) {
+          oriHtml += "<tr>";
+          tarHtml += "<tr>";
+        }
+
+        oriHtml += `<td align='center' width='28' height='28' style='color: red; background-color: rgb(${pValue}, ${pValue}, ${pValue});'>${pValue.toString()}</td>`;
+        tarHtml += `<td align='center' width='28' height='28' style='color: red; background-color: rgb(${qValue}, ${qValue}, ${qValue});'>${qValue.toString()}</td>`;
+
+        if (x == size-1) {
+          oriHtml += "</tr>";
+          tarHtml += "</tr>";
+        }
+      }
+
+      $("#dataOri").html(oriHtml);
+      $("#dataTar").html(tarHtml);
+
+      return {x, y};
+    }
+
+    function handleImageFiles(e) {  
+      var url = URL.createObjectURL(e.target.files[0]);
+      var img = new Image();
+      img.onload = function() {
+        cvsOri.width = img.width;
+        cvsOri.height = img.height;
+        ctxOri.drawImage(img, 0, 0);    
+      }
+      img.src = url;
+    }
+
+    function doImageProcessing() {
+      const filter = [
+        [parseFloat($("#f00").val()), parseFloat($("#f01").val()), parseFloat($("#f02").val())],
+        [parseFloat($("#f10").val()), parseFloat($("#f11").val()), parseFloat($("#f12").val())],
+        [parseFloat($("#f20").val()), parseFloat($("#f21").val()), parseFloat($("#f22").val())]
+      ];
+
+      const size = 512;
+      var imgData = ctxOri.getImageData(0, 0, cvsOri.width, cvsOri.height);
+      var tmp = [...Array(size)].map(x=>Array(size).fill(0.0));
+      
+      for (var i = 0; i < imgData.data.length; i += 4) {
+        const idx = parseInt(i / 4);
+        const x = idx % size;
+        const y = parseInt(idx / size);
+
+        tmp[x][y] = imgData.data[i];
+      }
+
+      for (var x = 0; x < size; x++) {
+        for (var y = 0; y < size; y++) {
+          var sum = 0.0;
+          for (var i = 0; i < 3; i++) {
+            for (var j = 0; j < 3; j++) {
+              var tx = x + i - 1;
+              var ty = y + j - 1;
+
+              tx = (tx < 0) ? 0: tx;
+              ty = (ty < 0) ? 0: ty;
+              tx = (tx >= size) ? size-1: tx;
+              ty = (ty >= size) ? size-1: ty;
+
+              var current = tmp[tx][ty];
+              sum += parseFloat(current) * filter[i][j];
+            }
+          }
+
+          const idx = (y*size + x) * 4;
+          imgData.data[idx] = sum;
+          imgData.data[idx+1] = sum;
+          imgData.data[idx+2] = sum;
+        }
+        
+        ctxTar.putImageData(imgData, 0, 0, 0, 0, cvsOri.width, cvsOri.height);
+      }
+    }
+  </script>
+</body>
+</html>      
