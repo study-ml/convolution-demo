@@ -63,7 +63,8 @@
     cvsTar.addEventListener('mousemove', mousePos, false);
 
     window.onload = function() {
-      $('#inputImage').get(0).addEventListener('change', handleImageFiles, false);
+      // $('#inputImage').get(0).addEventListener('change', handleImageFiles, false);
+      loadImage2Canvas();
     }
 
     function mousePos(evt) {
@@ -120,6 +121,7 @@
       return {x, y};
     }
 
+    // automatically load image into canvas...
     function handleImageFiles(e) {  
       var url = URL.createObjectURL(e.target.files[0]);
       var img = new Image();
@@ -129,6 +131,18 @@
         ctxOri.drawImage(img, 0, 0);    
       }
       img.src = url;
+    }
+
+    async function loadImage2Canvas() {
+      let img = await loadImage("http://ec2-54-238-101-61.ap-northeast-1.compute.amazonaws.com/images/Baboon.bmp");
+      img.setAttribute('crossOrigin', '');
+      cvsOri.width = img.width;
+      cvsOri.height = img.height;
+      ctxOri.drawImage(img, 0, 0);
+    }
+
+    function loadImage(url) {
+      return new Promise(r => { let i = new Image(); i.onload = (() => r(i)); i.src = url; });
     }
 
     function doImageProcessing() {
