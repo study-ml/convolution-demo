@@ -10,7 +10,19 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-9">
-        <p>Open image: <input class="form-control" type="file" id="inputImage"/></p>
+        <label for="imgs">Choose an image: </label>
+        <select name="imgs" id="imgs" onchange="loadImage2Canvas();">
+          <option value="Baboon">Baboon</option>
+          <option value="Barbara">Barbara</option>
+          <option value="Boat">Boat</option>
+          <option value="F-16">F-16</option>
+          <option value="Goldhill">Goldhill</option>
+          <option value="Lena" selected>Lena</option>
+          <option value="Peppers">Peppers</option>
+          <option value="Remote">Remote</option>
+        </select>
+        <br>
+        <!-- <p>Open image: <input class="form-control" type="file" id="inputImage"/></p> -->
         <canvas id="ori" width="512" height="512" style="border:1px solid #000000;"></canvas>
         <canvas id="tar" width="512" height="512" style="border:1px solid #000000;"></canvas>
       </div>
@@ -134,8 +146,7 @@
     }
 
     async function loadImage2Canvas() {
-      let img = await loadImage("http://ec2-54-238-101-61.ap-northeast-1.compute.amazonaws.com/images/Baboon.bmp");
-      img.setAttribute('crossOrigin', '');
+      let img = await loadImage(`./images/${$("#imgs").val()}.bmp`);
       cvsOri.width = img.width;
       cvsOri.height = img.height;
       ctxOri.drawImage(img, 0, 0);
